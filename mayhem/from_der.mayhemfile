@@ -1,0 +1,7 @@
+project: PyOxidizer
+target: from-der
+
+cmds:
+  - cmd: /from_der
+  - cmd: /from_der_no_inst @@
+    libfuzzer: false
