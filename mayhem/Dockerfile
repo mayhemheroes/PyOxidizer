@@ -1,7 +1,7 @@
 # Build Stage
 FROM ghcr.io/evanrichter/cargo-fuzz:latest as builder
 
-RUN git clone --depth=1 https://github.com/openssl/openssl.git
+RUN git clone --depth=1 --recursive https://github.com/openssl/openssl.git
 RUN cp -r openssl/fuzz/corpora/x509 /testsuite
 
 ## Add source code to the build stage.
