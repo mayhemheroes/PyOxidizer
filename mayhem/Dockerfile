@@ -6,22 +6,28 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --de
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN cargo install -f cargo-fuzz
 
-## Add source code to the build stage.
 ADD . /src
-WORKDIR /src
+
+# Build in an isolated workspace so cargo fuzz resolves workspace root
+# to here, not /src (the PyOxidizer workspace)
+WORKDIR /tmp/x509build
+RUN cargo init --lib --name x509-certificate .
+RUN cp -r /src/x509-certificate/fuzz .
+# Switch dep from path=".." to crates.io; drop stale lockfile
+RUN sed -i 's|path = "\.\."|version = "0.25"|' fuzz/Cargo.toml && \
+    rm -f fuzz/Cargo.lock
 
 RUN echo building instrumented harnesses && \
-    bash -c "pushd x509-certificate && cargo fuzz build from_der && popd" && \
-    mv x509-certificate/fuzz/target/x86_64-unknown-linux-gnu/release/from_der /from_der && \
+    cargo fuzz build from_der && \
+    mv fuzz/target/x86_64-unknown-linux-gnu/release/from_der /from_der && \
     echo done
 
 RUN echo building non-instrumented harnesses && \
     export RUSTFLAGS="--cfg fuzzing -Clink-dead-code -Cdebug-assertions -C codegen-units=1" && \
-    bash -c "pushd x509-certificate/fuzz && cargo build --release && popd" && \
-    mv x509-certificate/fuzz/target/release/from_der /from_der_no_inst && \
+    cd fuzz && cargo build --release && cd .. && \
+    mv fuzz/target/release/from_der /from_der_no_inst && \
     echo done
 
 # Package Stage
 FROM ubuntu:22.04
-
 COPY --from=builder /from_der /from_der_no_inst /
