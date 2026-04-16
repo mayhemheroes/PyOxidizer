@@ -6,10 +6,6 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --de
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN cargo install -f cargo-fuzz
 
-RUN apt-get install -y git
-RUN git clone --depth=1 https://github.com/openssl/openssl.git
-RUN cp -r openssl/fuzz/corpora/x509 /testsuite
-
 ## Add source code to the build stage.
 ADD . /src
 WORKDIR /src
@@ -29,4 +25,3 @@ RUN echo building non-instrumented harnesses && \
 FROM ubuntu:22.04
 
 COPY --from=builder /from_der /from_der_no_inst /
-COPY --from=builder /testsuite/ /testsuite/
